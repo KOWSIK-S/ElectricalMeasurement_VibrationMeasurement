@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSV File Upload and Charts for Vibration Analysis</title>
-  <!-- Include Chart.js library for creating charts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.js"></script>
+  <!-- Updated Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Include PapaParse library for parsing CSV files -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.1/papaparse.min.js"></script>
   <style>
@@ -30,6 +32,13 @@
 
     th {
       background-color: #8E4585;
+    }
+
+    /* Style for the smaller pie chart */
+    #pieChart {
+      width: 60%; /* Adjust the width as needed */
+      height: 200px; /* Adjust the height as needed */
+      margin: auto;
     }
   </style>
 </head>
@@ -76,13 +85,13 @@
     <canvas id="scatterChart"></canvas>
     <p><br><br></p>
     <h3>Comparative Analysis (This pie graph will show the higher vibrating zones by comparing with the other)</h3>
-    <!-- Canvas for Pie Chart -->
+    <!-- Canvas for Smaller Pie Chart -->
     <canvas id="pieChart"></canvas>
   </div>
 
   <script>
     // Variable to store a global average value
-    let globalInteger = 0;
+    let globalAverage = 0;
 
     // Function to handle CSV upload and data processing
     const handleCSVUpload = (event) => {
@@ -181,7 +190,7 @@
           // Additional dataset for Average Vibration line
           {
             label: 'Average Vibration',
-            data: Array(labels.length).fill(globalInteger), // Initially set to globalInteger
+            data: Array(labels.length).fill(globalAverage),
             backgroundColor: 'rgba(0, 117, 0, 0.9)',
             borderColor: 'rgba(0, 117, 0, 1)',
             borderWidth: 4,
@@ -290,8 +299,8 @@
           ratingEmergency.textContent = '1 Star';
         }
 
-        // Update the globalInteger for further use
-        globalInteger = avg.toFixed(2);
+        // Update the globalAverage for further use
+        globalAverage = avg.toFixed(2);
       } else {
         // Handle the case when there are no valid vibration values
         minVibration.textContent = 'N/A';
