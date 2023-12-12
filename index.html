@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>CSV File Upload and Charts for Vibration Analysis</title>
+  <!-- Include Chart.js library for creating charts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.js"></script>
+  <!-- Include PapaParse library for parsing CSV files -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.1/papaparse.min.js"></script>
+  <style>
+    /* Style to make the chart responsive */
+    canvas {
+      width: 100%;
+      height: 400px;
+    }
+
+    /* Style for the table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #8E4585;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Upload CSV File</h2>
+  <!-- Form for uploading CSV file -->
+  <form id="csvForm" method="post">
+    <input type="file" id="csvFile" name="csvFile" accept=".csv">
+    <button type="submit">Upload</button>
+  </form>
+  <!-- Table to display Min, Max, Avg Values -->
+  <h3>Vibration Statistics</h3>
+  <table id="vibrationTable">
+    <tr>
+      <th>Statistic</th>
+      <th>Value</th>
+    </tr>
+    <tr>
+      <td>Minimum Vibration</td>
+      <td id="minVibration"></td>
+    </tr>
+    <tr>
+      <td>Maximum Vibration</td>
+      <td id="maxVibration"></td>
+    </tr>
+    <tr>
+      <td>Average Vibration</td>
+      <td id="avgVibration"></td>
+    </tr>
+    <tr>
+      <td>Rating for Average</td>
+      <td id="ratingAverage"></td>
+    </tr>
+    <tr>
+      <td>Rating for Emergency</td>
+      <td id="ratingEmergency"></td>
+    </tr>
+  </table>
+  <!-- Container for charts -->
+  <div id="chartContainer">
+    <h2>Vibration Analysis for EV Vehicles</h2>
+    <!-- Canvas for Scatter Chart -->
+    <canvas id="scatterChart"></canvas>
+    <p><br><br></p>
+    <h3>Comparative Analysis (This pie graph will show the higher vibrating zones by comparing with the other)</h3>
+    <!-- Canvas for Pie Chart -->
+    <canvas id="pieChart"></canvas>
+  </div>
+
+  <script>
+    // Variable to store a global average value
+    let globalInteger = 0;
+
+    // Function to handle CSV upload and data processing
+    const handleCSVUpload = (event) => {
+      event.preventDefault();
+
+      // Get the selected CSV file
+      const csvFile = document.getElementById('csvFile').files[0];
+      if (!csvFile) {
+        return;
+      }
+
+      // Use PapaParse to parse the CSV file
+      Papa.parse(csvFile, {
+        header: true,
+        complete: (results) => {
+          // Extract data from the parsed CSV results
+          const data = results.data;
+          const labels = [];
+          const vibrationValues = [];
+
+          // Iterate through each row in the CSV data
+          for (const row of data) {
+            // Extract labels (locations) and vibration values from each row
+            labels.push(row.location);
+
+            // Parse the vibration value and ensure it's a valid number
+            const vibration = parseFloat(row.vibration);
+            if (!isNaN(vibration)) {
+              vibrationValues.push(vibration);
+            }
+          }
+
+          // Update statistics table
+          updateStatistics(vibrationValues);
+
+          // Update scatter and pie charts with the processed data
+          updateScatterChart(labels, vibrationValues);
+          updatePieChart(labels, vibrationValues);
+        },
+      });
+    };
+
+    // Attach event listener to the form submit button
+    const form = document.getElementById('csvForm');
+    form.addEventListener('submit', handleCSVUpload);
+
+    // Function to update scatter chart and statistics table
+    function updateScatterChart(labels, vibrationValues) {
+      // Get the canvas context for the scatter chart
+      const scatterCtx = document.getElementById('scatterChart').getContext('2d');
+
+      // Data for the scatter chart
+      const scatterData = {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Vibrational level Curve',
+            data: vibrationValues,
+            backgroundColor: 'rgba(98, 60, 117, 0.4)',
+            borderColor: 'rgba(98, 60, 117, 0.7)',
+            borderWidth: 2,
+            type: 'line',
+            fill: false,
+            pointRadius: 2,
+          },
+          {
+            label: 'Danger Line',
+            data: Array(labels.length).fill(1000),
+            backgroundColor: 'rgba(153,153,153,0.9)',
+            borderColor: 'rgba(153,153,153,1)',
+            borderWidth: 3,
+            type: 'line',
+            fill: false,
+            pointRadius: 0, // Set pointRadius to 0 to remove data points
+          },
+          {
+            label: 'Normal Car',
+            data: Array(labels.length).fill(500),
+            backgroundColor: 'rgba(0, 169, 255, 0.8)',
+            borderColor: 'rgba(0, 169, 255, 1)',
+            borderWidth: 2,
+            type: 'line',
+            fill: false,
+            pointRadius: 0, // Set pointRadius to 0 to remove data points
+          },
+          {
+            label: 'Ambulance',
+            data: Array(labels.length).fill(650),
+            backgroundColor: 'rgba(232, 17, 35, 0.8)',
+            borderColor: 'rgba(232, 17, 35, 1)',
+            borderWidth: 2,
+            type: 'line',
+            fill: false,
+            pointRadius: 0, // Set pointRadius to 0 to remove data points
+          },
+          // Additional dataset for Average Vibration line
+          {
+            label: 'Average Vibration',
+            data: Array(labels.length).fill(globalInteger), // Initially set to globalInteger
+            backgroundColor: 'rgba(0, 117, 0, 0.9)',
+            borderColor: 'rgba(0, 117, 0, 1)',
+            borderWidth: 4,
+            type: 'line',
+            fill: false,
+            pointRadius: 0, // Set pointRadius to 0 to remove data points
+          },
+        ],
+      };
+
+      // Create a scatter chart
+      const scatterChart = new Chart(scatterCtx, {
+        type: 'scatter',
+        data: scatterData,
+        options: {
+          scales: {
+            xAxes: [{
+              type: 'category',
+              ticks: {
+                autoSkip: false,
+                maxRotation: 0,
+              },
+            }],
+            yAxes: [{
+              ticks: {
+                beginAtZero: true,
+              },
+            }],
+          },
+        },
+      });
+
+      // Update statistics table (added for completeness)
+      updateStatistics(vibrationValues);
+    }
+
+    // Function to update pie chart
+    function updatePieChart(labels, vibrationValues) {
+      // Get the canvas context for the pie chart
+      const pieCtx = document.getElementById('pieChart').getContext('2d');
+
+      // Data for the pie chart
+      const pieData = {
+        labels: labels,
+        datasets: [{
+          data: vibrationValues,
+          backgroundColor: [
+            '#FF9999', '#F08080', '#FA8072', '#F4A460', '#987654', '#8B4513', '#A0522D', '#6B2222', '#871F78', '#6A5ACD',
+            '#4169E1', '#00BFFF', '#00CCFF', '#3399FF', '#4285F4', '#4169E1', '#0000FF', '#00008B', '#0099CC', '#00FFFF',
+            '#008000', '#00FF00', '#32CD32', '#9ACD32',
+          ],
+        }],
+      };
+
+      // Create a pie chart
+      const pieChart = new Chart(pieCtx, {
+        type: 'pie',
+        data: pieData,
+      });
+    }
+
+    // Function to update statistics table
+    function updateStatistics(vibrationValues) {
+      // Get elements for displaying statistics
+      const minVibration = document.getElementById('minVibration');
+      const maxVibration = document.getElementById('maxVibration');
+      const avgVibration = document.getElementById('avgVibration');
+      const ratingAverage = document.getElementById('ratingAverage');
+      const ratingEmergency = document.getElementById('ratingEmergency');
+
+      // Check if there are valid vibration values
+      if (vibrationValues.length > 0) {
+        // Calculate minimum, maximum, and average vibration values
+        const min = Math.min(...vibrationValues);
+        const max = Math.max(...vibrationValues);
+        const avg = vibrationValues.reduce((sum, value) => sum + value, 0) / vibrationValues.length;
+
+        // Update the statistics table with the calculated values
+        minVibration.textContent = min.toFixed(2);
+        maxVibration.textContent = max.toFixed(2);
+        avgVibration.textContent = avg.toFixed(2);
+
+        // Update the Rating for Average based on average value
+        if (avg < 500) {
+          ratingAverage.textContent = '5 Star';
+        } else if (avg < 750) {
+          ratingAverage.textContent = '4 Star';
+        } else if (avg < 1000) {
+          ratingAverage.textContent = '3 Star';
+        } else if (avg < 1250) {
+          ratingAverage.textContent = '2 Star';
+        } else {
+          ratingAverage.textContent = '1 Star';
+        }
+
+        // Update the Rating for Emergency based on average value
+        if (avg < 700) {
+          ratingEmergency.textContent = '5 Star';
+        } else if (avg < 900) {
+          ratingEmergency.textContent = '4 Star';
+        } else if (avg < 1100) {
+          ratingEmergency.textContent = '3 Star';
+        } else if (avg < 1300) {
+          ratingEmergency.textContent = '2 Star';
+        } else {
+          ratingEmergency.textContent = '1 Star';
+        }
+
+        // Update the globalInteger for further use
+        globalInteger = avg.toFixed(2);
+      } else {
+        // Handle the case when there are no valid vibration values
+        minVibration.textContent = 'N/A';
+        maxVibration.textContent = 'N/A';
+        avgVibration.textContent = 'N/A';
+        ratingAverage.textContent = 'N/A';
+        ratingEmergency.textContent = 'N/A';
+      }
+    }
+  </script>
+</body>
+
+</html>
