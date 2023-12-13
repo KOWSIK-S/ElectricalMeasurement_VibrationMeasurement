@@ -2,14 +2,36 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSV File Upload and Charts for Vibration Analysis</title>
-  <!-- Updated Chart.js library -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Include Chart.js library for creating charts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.js"></script>
   <!-- Include PapaParse library for parsing CSV files -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.1/papaparse.min.js"></script>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    #container {
+      max-width: 800px;
+      margin: 20px auto;
+      background-color: #fff;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #8E4585;
+      text-align: center;
+    }
+
+    h2 {
+      color: #333;
+    }
+
     /* Style to make the chart responsive */
     canvas {
       width: 100%;
@@ -21,77 +43,100 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
 
     th,
     td {
       border: 1px solid #ddd;
-      padding: 8px;
+      padding: 12px;
       text-align: left;
     }
 
     th {
       background-color: #8E4585;
+      color: #fff;
     }
 
-    /* Style for the smaller pie chart */
-    #pieChart {
-      width: 60%; /* Adjust the width as needed */
-      height: 200px; /* Adjust the height as needed */
-      margin: auto;
+    form {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    input[type="file"] {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      flex: 1;
+    }
+
+    button {
+      background-color: #8E4585;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #6c356e;
     }
   </style>
 </head>
 
 <body>
-  <h2>Upload CSV File</h2>
-  <!-- Form for uploading CSV file -->
-  <form id="csvForm" method="post">
-    <input type="file" id="csvFile" name="csvFile" accept=".csv">
-    <button type="submit">Upload</button>
-  </form>
-  <!-- Table to display Min, Max, Avg Values -->
-  <h3>Vibration Statistics</h3>
-  <table id="vibrationTable">
-    <tr>
-      <th>Statistic</th>
-      <th>Value</th>
-    </tr>
-    <tr>
-      <td>Minimum Vibration</td>
-      <td id="minVibration"></td>
-    </tr>
-    <tr>
-      <td>Maximum Vibration</td>
-      <td id="maxVibration"></td>
-    </tr>
-    <tr>
-      <td>Average Vibration</td>
-      <td id="avgVibration"></td>
-    </tr>
-    <tr>
-      <td>Rating for Average</td>
-      <td id="ratingAverage"></td>
-    </tr>
-    <tr>
-      <td>Rating for Emergency</td>
-      <td id="ratingEmergency"></td>
-    </tr>
-  </table>
-  <!-- Container for charts -->
-  <div id="chartContainer">
-    <h2>Vibration Analysis for EV Vehicles</h2>
-    <!-- Canvas for Scatter Chart -->
-    <canvas id="scatterChart"></canvas>
-    <p><br><br></p>
-    <h3>Comparative Analysis (This pie graph will show the higher vibrating zones by comparing with the other)</h3>
-    <!-- Canvas for Smaller Pie Chart -->
-    <canvas id="pieChart"></canvas>
+  <div id="container">
+    <h1>Vibration Analysis Dashboard</h1>
+    <h2>Upload CSV File</h2>
+    <!-- Form for uploading CSV file -->
+    <form id="csvForm" method="post">
+      <input type="file" id="csvFile" name="csvFile" accept=".csv">
+      <button type="submit">Upload</button>
+    </form>
+    <!-- Table to display Min, Max, Avg Values -->
+    <h3>Vibration Statistics</h3>
+    <table id="vibrationTable">
+      <tr>
+        <th>Statistic</th>
+        <th>Value</th>
+      </tr>
+      <tr>
+        <td>Minimum Vibration</td>
+        <td id="minVibration"></td>
+      </tr>
+      <tr>
+        <td>Maximum Vibration</td>
+        <td id="maxVibration"></td>
+      </tr>
+      <tr>
+        <td>Average Vibration</td>
+        <td id="avgVibration"></td>
+      </tr>
+      <tr>
+        <td>Rating for Average</td>
+        <td id="ratingAverage"></td>
+      </tr>
+      <tr>
+        <td>Rating for Emergency</td>
+        <td id="ratingEmergency"></td>
+      </tr>
+    </table>
+    <!-- Container for charts -->
+    <div id="chartContainer">
+      <h2>Vibration Analysis for EV Vehicles</h2>
+      <!-- Canvas for Scatter Chart -->
+      <canvas id="scatterChart"></canvas>
+      <p><br><br></p>
+      <h3>Comparative Analysis (This pie graph will show the higher vibrating zones by comparing with the other)</h3>
+      <!-- Canvas for Pie Chart -->
+      <canvas id="pieChart"></canvas>
+    </div>
   </div>
 
-  <script>
-    // Variable to store a global average value
-    let globalAverage = 0;
+  <script>    // Variable to store a global average value
+    let globalInteger = 0;
 
     // Function to handle CSV upload and data processing
     const handleCSVUpload = (event) => {
@@ -190,7 +235,7 @@
           // Additional dataset for Average Vibration line
           {
             label: 'Average Vibration',
-            data: Array(labels.length).fill(globalAverage),
+            data: Array(labels.length).fill(globalInteger), // Initially set to globalInteger
             backgroundColor: 'rgba(0, 117, 0, 0.9)',
             borderColor: 'rgba(0, 117, 0, 1)',
             borderWidth: 4,
@@ -299,8 +344,8 @@
           ratingEmergency.textContent = '1 Star';
         }
 
-        // Update the globalAverage for further use
-        globalAverage = avg.toFixed(2);
+        // Update the globalInteger for further use
+        globalInteger = avg.toFixed(2);
       } else {
         // Handle the case when there are no valid vibration values
         minVibration.textContent = 'N/A';
